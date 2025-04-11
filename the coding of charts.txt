@@ -1,0 +1,275 @@
+the coding of charts (Figure 4.1 Recall and AP vs. Object Distance)
+_______________________________________________________________
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Dummy Data: Replace these with your actual results
+# Object distances (in meters) and metrics
+distances = ["0-15m", "15-35m", ">35m"]
+fused_recall_dist = [90.1, 71.8, 46.0]
+camera_recall_dist = [73.4, 45.6, 13.8]
+fused_improvement_dist = [16.7, 26.2, 32.2]  # Improvement percentages
+
+# Number of radar points and metrics
+radar_points = ["0-5", "5-10", "10-20", ">20"]
+fused_recall_radar = [33.9, 72.6, 83.0, 89.0]
+camera_recall_radar = [27.7, 39.2, 52.1, 60.3]
+fused_improvement_radar = [22.4, 33.4, 30.9, 28.7]  # Improvement percentages
+
+# Create the subplots
+fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+
+# Chart 1: Recall vs Object Distance
+axes[0].plot(distances, fused_recall_dist, 'o-', label="Fused Recall / AP")
+axes[0].plot(distances, camera_recall_dist, 'o--', label="Camera-only Recall / AP")
+for i, (x, y, imp) in enumerate(zip(distances, fused_recall_dist, fused_improvement_dist)):
+    axes[0].text(i, y + 2, f"+{imp}%", ha='center', fontsize=10, color='blue')
+axes[0].set_title("(a) Object Distances", fontsize=14)
+axes[0].set_xlabel("Object Distances (m)", fontsize=12)
+axes[0].set_ylabel("Recall / AP (%)", fontsize=12)
+axes[0].legend(fontsize=10)
+axes[0].grid(True)
+
+# Chart 2: Recall vs Number of Radar Points
+axes[1].plot(radar_points, fused_reimport matplotlib.pyplot as plt
+import numpy as np
+
+# Dummy Data: Replace these with your actual results
+# Object distances (in meters) and metrics
+distances = ["0-15m", "15-35m", ">35m"]
+fused_recall_dist = [90.1, 71.8, 46.0]
+camera_recall_dist = [73.4, 45.6, 13.8]
+fused_improvement_dist = [16.7, 26.2, 32.2]  # Improvement percentages
+
+# Number of radar points and metrics
+radar_points = ["0-5", "5-10", "10-20", ">20"]
+fused_recall_radar = [33.9, 72.6, 83.0, 89.0]
+camera_recall_radar = [27.7, 39.2, 52.1, 60.3]
+fused_improvement_radar = [22.4, 33.4, 30.9, 28.7]  # Improvement percentages
+
+# Create the subplots
+fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+
+# Chart 1: Recall vs Object Distance
+axes[0].plot(distances, fused_recall_dist, 'o-', label="Fused Recall / AP")
+axes[0].plot(distances, camera_recall_dist, 'o--', label="Camera-only Recall / AP")
+for i, (x, y, imp) in enumerate(zip(distances, fused_recall_dist, fused_improvement_dist)):
+    axes[0].text(i, y + 2, f"+{imp}%", ha='center', fontsize=10, color='blue')
+axes[0].set_title("(a) Object Distances", fontsize=14)
+axes[0].set_xlabel("Object Distances (m)", fontsize=12)
+axes[0].set_ylabel("Recall / AP (%)", fontsize=12)
+axes[0].legend(fontsize=10)
+axes[0].grid(True)
+
+# Chart 2: Recall vs Number of Racall_radar, 'o-', label="Fused Recall / AP")
+axes[1].plot(radar_points, camera_recall_radar, 'o--', label="Camera-only Recall / AP")
+for i, (x, y, imp) in enumerate(zip(radar_points, fused_recall_radar, fused_improvement_radar)):
+    axes[1].text(i, y + 2, f"+{imp}%", ha='center', fontsize=10, color='blue')
+axes[1].set_title("(b) Number of Radar Points", fontsize=14)
+axes[1].set_xlabel("Number of Radar Points", fontsize=12)
+axes[1].set_ylabel("Recall / AP (%)", fontsize=12)
+axes[1].legend(fontsize=10)
+axes[1].grid(True)
+
+# Show the plots
+plt.tight_layout()
+plt.show()
+
+
+_________________________________________________________________________________________________________________________________
+
+Figure 4.2 Fusion-CR vs. Other Detection Models
+________________________________________________________________________________________________________________________________
+
+import matplotlib.pyplot as plt
+
+# Data: Replace these with your actual metrics
+models = ["Fusion-CR (Ours)", "CRN", "StreamPETR", "BEVPoolv2", "BEVStereo", "SOLOFusion", "BEVDet4D", "PETRv2", "BEVDepth"]
+inference_speed = [25, 20, 27, 18, 15, 12, 17, 16, 18]  # Inference speed (FPS)
+nds = [56, 54, 55, 50, 48, 51, 45, 47, 46]  # NDS scores
+
+# Colors for each model
+colors = ['red', 'blue', 'purple', 'brown', 'orange', 'purple', 'green', 'blue', 'green']
+
+# Create the plot
+plt.figure(figsize=(8, 6))
+for i in range(len(models)):
+    plt.scatter(inference_speed[i], nds[i], label=models[i], color=colors[i], s=100)
+    if models[i] == "Fusion-CR (Ours)":
+        plt.annotate(models[i], (inference_speed[i] + 0.5, nds[i] + 0.5), color='red', fontsize=10)
+    else:
+        plt.annotate(models[i], (inference_speed[i] + 0.5, nds[i]), fontsize=8)
+
+# Add labels, grid, and title
+plt.xlabel("Inference Speed (FPS)", fontsize=12)
+plt.ylabel("NDS", fontsize=12)
+plt.title("Comparison of Object Detection Models", fontsize=14)
+plt.grid(True)
+
+# Add legend
+plt.legend(loc="lower right", fontsize=8, bbox_to_anchor=(1.3, 0))
+
+# Display the plot
+plt.tight_layout()
+plt.show()
+
+
+_______________________________________________________________________________________________________________
+
+Figure 4.5 Metrics Analysis for Object Detection Models
+________________________________________________________________________________________________________________
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Data
+models = ['BEVDet (R50)', 'BEVFormerV2', 'Fusion-CR (Ours)', 'CRN (R50)']
+mAP = [29.8, 34.9, 39.1, 45.5]
+NDS = [37.9, 42.8, 46.6, 54.8]
+mAVE = [0.86, 0.60, 0.70, 0.35]
+FPS = [30.2, 28.5, 29.5, 20.4]
+
+# Chart styling
+x = np.arange(len(models))  # the label locations
+width = 0.2  # the width of the bars
+
+fig, ax1 = plt.subplots(figsize=(10, 6))
+
+# Bar chart for mAP, NDS, FPS
+rects1 = ax1.bar(x - width, mAP, width, label='mAP (%)')
+rects2 = ax1.bar(x, NDS, width, label='NDS (%)')
+rects3 = ax1.bar(x + width, FPS, width, label='FPS')
+
+# Secondary axis for mAVE
+ax2 = ax1.twinx()
+rects4 = ax2.plot(x, mAVE, color='red', marker='o', label='mAVE (m/s)', linewidth=2)
+
+# Formatting
+ax1.set_xlabel('Detection Models', fontsize=12)
+ax1.set_ylabel('mAP, NDS, FPS', fontsize=12)
+ax2.set_ylabel('mAVE (m/s)', fontsize=12, color='red')
+ax1.set_title('Performance Comparison of Detection Models', fontsize=14)
+ax1.set_xticks(x)
+ax1.set_xticklabels(models, rotation=45, ha='right', fontsize=10)
+ax1.legend(loc='upper left')
+ax2.legend(loc='upper right')
+
+# Annotate bars
+for rect in rects1:
+    height = rect.get_height()
+    ax1.annotate(f'{height:.1f}', xy=(rect.get_x() + rect.get_width() / 2, height),
+                 xytext=(0, 3), textcoords="offset points", ha='center', va='bottom')
+
+for rect in rects2:
+    height = rect.get_height()
+    ax1.annotate(f'{height:.1f}', xy=(rect.get_x() + rect.get_width() / 2, height),
+                 xytext=(0, 3), textcoords="offset points", ha='center', va='bottom')
+
+for rect in rects3:
+    height = rect.get_height()
+    ax1.annotate(f'{height:.1f}', xy=(rect.get_x() + rect.get_width() / 2, height),
+                 xytext=(0, 3), textcoords="offset points", ha='center', va='bottom')
+
+for i, val in enumerate(mAVE):
+    ax2.annotate(f'{val:.2f}', xy=(x[i], val), xytext=(0, 5), textcoords="offset points", ha='center', va='bottom', color='red')
+
+# Grid and layout
+ax1.grid(axis='y', linestyle='--', alpha=0.7)
+fig.tight_layout()
+
+plt.show()
+ ______________________________________________________________________________________________________
+
+
+______________________________________________________________________________________________________
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Data from the table
+models = ['BEVDet (R50)', 'BEVFormerV2', 'Fusion-CR (Ours)', 'CRN (R50)']
+categories = ['Car', 'Truck', 'Person', 'Bus', 'Bicycle', 'Motorcycle']
+data = [
+    [50.20, 32.45, 25.30, 44.12, 22.78, 24.15],  # BEVDet (R50)
+    [52.15, 35.10, 26.75, 46.50, 24.30, 25.50],  # BEVFormerV2
+    [54.30, 36.20, 28.50, 48.40, 25.90, 26.80],  # Fusion-CR (Ours)
+    [55.80, 38.50, 30.20, 50.30, 27.50, 28.60]   # CRN (R50)
+]
+
+# Define bar width and positions
+x = np.arange(len(categories))  # Positions for categories
+bar_width = 0.2  # Width of each bar
+
+# Plot each model's data
+fig, ax = plt.subplots(figsize=(12, 6))
+for i, model in enumerate(models):
+    ax.bar(x + i * bar_width, data[i], width=bar_width, label=model)
+
+# Add labels, title, and legend
+ax.set_xlabel('Object Classes', fontsize=12)
+ax.set_ylabel('Performance (%)', fontsize=12)
+ax.set_title('Per-Class Performance of Detection Models', fontsize=14)
+ax.set_xticks(x + bar_width * (len(models) - 1) / 2)
+ax.set_xticklabels(categories, fontsize=10)
+ax.legend(title='Models', fontsize=10)
+
+# Annotate bars with values
+for i, model_data in enumerate(data):
+    for j, value in enumerate(model_data):
+        ax.text(x[j] + i * bar_width, value + 0.5, f'{value:.2f}', ha='center', va='bottom', fontsize=8)
+
+# Display the grid and layout
+ax.grid(axis='y', linestyle='--', alpha=0.7)
+fig.tight_layout()
+plt.show()
+_____________________________________________________________________________________________________________
+Figure 4.11: Comparison of Radar Encoder Performance
+Figure 4.10: Performance Comparison of Velocity, Intensity, and Combined Radar Information
+Figure 4.9: Performance Comparison of Different Radar Sweeps
+Figure 4.8: Performance Comparison of Different Image Sizes
+Figure 4.7: Performance Comparison of Different Image Backbones
+____________________________________________________________________________________________________________
+_import pandas as pd
+import matplotlib.pyplot as plt
+
+# Load the dataset (Replace 'sensor_fusion_results.csv' with your actual file)
+file_path = 'sensor_fusion_results.csv'  # Update with correct path
+df = pd.read_csv(file_path)
+
+# Extract metrics (assume the first column contains metric names)
+metrics = df['Metric']
+df = df.set_index('Metric')
+
+# Define groups for plotting
+categories = {
+    "Image Backbone": ["STTiny", "ResNet50"],
+    "Image Size": ["704x256", "1056x384", "1408x512"],
+    "Radar Information": ["Velocity", "Intensity", "Velocity+Intensity"],
+    "Radar Sweeps": ["radar_sweeps_1", "radar_sweeps_3", "radar_sweeps_5", "radar_sweeps_10", "radar_sweeps_15"],
+    "Radar Encoder": ["Voxel", "Pillar"]
+}
+
+# Plot performance comparisons
+fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+axes = axes.flatten()
+
+for idx, (title, cols) in enumerate(categories.items()):
+    if idx >= len(axes):
+        break  # Prevent index error if categories exceed available plots
+    
+    ax = axes[idx]
+    for col in cols:
+        ax.plot(metrics, df[col], marker='o', linestyle='-', label=col)
+    
+    ax.set_title(f"Performance of {title.lower()}")
+    ax.set_xlabel("Metrics")
+    ax.set_ylabel("Score")
+    ax.legend()
+    ax.grid(True)
+
+# Hide extra subplot if any
+if len(categories) < len(axes):
+    axes[len(categories)].axis('off')
+
+plt.tight_layout()
+plt.show()

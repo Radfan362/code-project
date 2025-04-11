@@ -1,0 +1,113 @@
+# Import necessary libraries
+import numpy as np
+import tensorflow as tf
+import cv2
+from nuscenes.nuscenes import NuScenes
+from nuscenes.utils.data_classes import RadarData, CameraData
+from nuscenes.utils.geometry_utils import view_points
+from nuscenes.utils.data_io import load_map
+import matplotlib.pyplot as plt
+
+# Define the function to load nuScenes data
+def load_nuscenes_data(version='v1.0-mini', dataroot='path_to_nuscenes_data'):
+    nusc = NuScenes(version=version, dataroot=dataroot, verbose=True)
+    return nusc
+
+# Function to load and preprocess camera data (image)
+def load_camera_data(nusc, sample_data_token):
+    # Get camera data
+    cam_data = nusc.get('sample_data', sample_data_token)
+    image_path = nusc.get_sample_data_path(cam_data['token'])
+    
+    # Read image using OpenCV
+    img = cv2.imread(image_path)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    
+    # Resize and normalize image
+    img = cv2.resize(img, (224, 224))  # Resize to a standard size for CNN input
+    img = img / 255.0  # Normalize to [0, 1]
+    
+    return img
+
+# Function to load and preprocess radar data (point cloud)
+def load_radar_data(nusc, sample_data_token):
+    radar_data = nusc.get('sample_data', sample_data_token)
+    radar_path = nusc.get_sample_data_path(radar_data['token'])
+    
+    # Load radar data as numpy array
+    radar_points = np.fromfile(radar_path, dtype=np.float32).reshape(-1, 5)  # [x, y, z, intensity, time]
+    
+    # Apply any necessary preprocessing (e.g., remove points with low intensity)
+    radar_points = radar_points[radar_points[:, 3] > 0.5]
+    
+    return radar_points
+
+# Function to fuse camera and radar data
+def fuse_camera_radar_data(camera_img, radar_points):
+    # Example of a simple fusion approach: Concatenate radar points with camera image features
+    # Extract camera image features using a CNN (e.g., MobileNetV2)
+    
+    model = tf.keras.applications.MobileNetV2(input_shape=(224, 224, 3), include_top=False, weights='imagenet')
+    model.trainable = False  # Freeze the weights
+    
+    # Extract features from the camera image
+    cam_features = model(tf.convert_to_tensor(camera_img[None, ...]))
+    cam_features = tf.reduce_mean(cam_features, axis=(1, 2))  # Global average pooling
+    
+    # For radar, we use the x, y, z coordinates (ignoring intensity and time for simplicity)
+    radar_features = radar_points[:, :3].mean(axis=0)  # Average position of points
+    
+    # Concatenate the features
+    fused_features = np.concatenate([cam_features.numpy(), radar_features], axis=0)
+    
+    return fused_features
+
+# Function to create a simple object detection model using fused data
+def build_model(input_shape):
+    # Build a simple fully connected model to detect objects based on fused features
+    model = tf.keras.Sequential([
+        tf.keras.layers.InputLayer(input_shape=input_shape),
+        tf.keras.layers.Dense(128, activation='relu'),
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dense(2, activation='softmax')  # Assuming binary classification (object vs no object)
+    ])
+    
+    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    
+    return model
+
+# Main function to run the sensor fusion and object detection
+def run_sensor_fusion(nusc, sample_token):
+    # Get the sample data token for camera and radar
+    sample = nusc.get('sample', sample_token)
+    cam_data_token = sample['data']['CAM_FRONT']
+    radar_data_token = sample['data']['RADAR_FRONT']
+    
+    # Load and preprocess the camera and radar data
+    camera_img = load_camera_data(nusc, cam_data_token)
+    radar_points = load_radar_data(nusc, radar_data_token)
+    
+    # Fuse the camera and radar data
+    fused_features = fuse_camera_radar_data(camera_img, radar_points)
+    
+    # Build and train the model (for simplicity, we'll use dummy labels here)
+    model = build_model(fused_features.shape)
+    
+    # Example dummy labels for training (change based on actual annotations in your dataset)
+    labels = np.array([[1, 0]])  # 1 for object, 0 for no object
+    
+    # Train the model on the fused features (in practice, use a larger dataset)
+    model.fit(fused_features[None, :], labels, epochs=10)
+    
+    return model
+
+# Load nuScenes data
+nusc = load_nuscenes_data()
+
+# Use a sample from the dataset (replace with actual sample token)
+sample_token = nusc.sample[0]['token']
+
+# Run the sensor fusion and object detection
+model = run_sensor_fusion(nusc, sample_token)
+
+# You can now use the trained model to predict object detection on new sensor fusion data

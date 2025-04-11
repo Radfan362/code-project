@@ -1,0 +1,433 @@
+Creating Python code for a "Spatial synchronous infusion for one Camera and one Radar on road traffic" involves several key steps: sensor data processing, data synchronization, object detection, fusion of radar and camera data, tracking, and evaluation. I'll provide a conceptual Python framework that breaks down these steps. Note that this code is a simplified starting point, and specific parts (like radar and camera sensor data handling) would require integration with your actual sensors or datasets.
+
+We'll use common libraries like OpenCV, NumPy, and Kalman Filters for object tracking, along with TensorFlow/Keras (for deep learning models) or other machine learning libraries for object detection. The code will also assume some preprocessing and fusion logic.
+Python Code for the Methodology: Spatial Synchronous Infusion for One Camera and One Radar
+1. Import Libraries and Setup
+_________________________________________________________________________________
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.spatial import distance
+from filterpy.kalman import KalmanFilter
+from sklearn.metrics import precision_score, recall_score, f1_score
+import time
+
+# Example of loading a pre-trained deep learning model for object detection (e.g., YOLO, SSD)
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+
+# Assuming radar and camera data are provided as pre-recorded video or sensor data files.
+__________________________________________________________________________________________
+
+2. Radar Sensor Data Preprocessing
+
+Radar data typically involves object detection based on the Doppler shift and distance measurements. We'll assume that radar data gives us object locations in polar coordinates (distance, angle) or Cartesian coordinates.
+_________________________________________________________________________________
+def preprocess_radar_data(radar_raw_data):
+    """
+    Simulate preprocessing of radar data (e.g., converting polar to Cartesian).
+    Radar data typically provides object distance and angle.
+    """
+    radar_objects = []
+    for data_point in radar_raw_data:
+        # Convert polar to Cartesian (r, θ -> x, y)
+        x = data_point['distance'] * np.cos(data_point['angle'])
+        y = data_point['distance'] * np.sin(data_point['angle'])
+        radar_objects.append([x, y, data_point['velocity']])
+    return np.array(radar_objects)
+________________________________________________________________________________
+
+3. Camera Sensor Data Preprocessing
+
+For camera data, we assume using a pre-trained model (e.g., MobileNetV2, YOLO) to detect objects.
+________________________________________________________________________________
+def preprocess_camera_data(camera_frame):
+    """
+    Preprocess camera frames for object detection.
+    We assume using a pre-trained model (MobileNetV2 for simplicity).
+    """
+    # Pre-process the image for the MobileNetV2 model
+    img = cv2.cvtColor(camera_frame, cv2.COLOR_BGR2RGB)
+    img = cv2.resize(img, (224, 224))
+    img_array = image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0)
+    img_array = preprocess_input(img_array)
+
+    # Predict using the pre-trained model
+    model = MobileNetV2(weights="imagenet")
+    preds = model.predict(img_array)
+    return preds
+____________________________________________________________________________________
+4. Sensor Data Synchronization
+
+Sensor data synchronization ensures both radar and camera data align correctly in time. We'll assume that radar data and camera data are provided at different rates. Here's an approach to synchronize the data:
+_____________________________________________________________________________
+
+def synchronize_data(radar_data, camera_data, time_interval=0.1):
+    """
+    Synchronize radar and camera data by timestamp or frame index.
+    For simplicity, we assume radar data is slower and we'll align by timestamps.
+    """
+    synchronized_data = []
+    camera_idx = 0
+    for radar_point in radar_data:
+        # Find the closest camera frame based on timestamps or time intervals
+        closest_camera_frame = camera_data[camera_idx]
+        synchronized_data.append((radar_point, closest_camera_frame))
+        
+        # Increment camera index based on timestamp alignment
+        if camera_idx + 1 < len(camera_data) and radar_point['timestamp'] >= closest_camera_frame['timestamp']:
+            camera_idx += 1
+    return synchronized_data
+_____________________________________________________________________________________
+5. Sensor Fusion
+
+We'll use Kalman Filters to fuse data from both the radar and camera sensors for object tracking. The Kalman Filter helps with the fusion of noisy measurements and maintains object identity across frames.
+__________________________________________________________________________________
+def initialize_kalman_filter():
+    """Initialize a Kalman filter for object tracking."""
+    kf = KalmanFilter(dim_x=4, dim_z=2)
+    kf.F = np.array([[1, 0, 1, 0],  # Transition matrix (motion model)
+                     [0, 1, 0, 1],
+                     [0, 0, 1, 0],
+                     [0, 0, 0, 1]])
+    kf.H = np.array([[1, 0, 0, 0],  # Observation matrix (from radar or camera)
+                     [0, 1, 0, 0]])
+    kf.P *= 1000.  # Covariance matrix
+    kf.R = np.array([[5, 0],        # Measurement noise (radar/camera)
+                     [0, 5]])
+    kf.Q = np.eye(4) * 0.1  # Process noise
+    return kf
+
+def fuse_sensors(radar_data, camera_data):
+    """Fuse radar and camera data using Kalman Filter."""
+    kf = initialize_kalman_filter()
+    fused_objects = []
+    
+    for radar_point, camera_frame in zip(radar_data, camera_data):
+        # Radar provides position and velocity; Camera provides visual detection
+        radar_position = np.array([radar_point[0], radar_point[1]])  # [x, y]
+        camera_position = np.array([camera_frame['x'], camera_frame['y']])  # [x, y]
+        
+        # Kalman prediction step (we assume the radar gives velocity too)
+        kf.predict()
+        
+        # Kalman update step (fusion with camera and radar data)
+        kf.update(radar_position)  # Using radar data for position
+        fused_objects.append(kf.x)
+        
+        # Optionally, you can fuse visual data for classification/segmentation
+        camera_class = preprocess_camera_data(camera_frame)  # Apply deep learning model
+        print(f'Camera Object Class: {camera_class}')
+    
+    return fused_objects 
+_____________________________________________________________________________________
+6. Evaluation Metrics
+
+Finally, to evaluate the performance of object detection, tracking, and fusion, we calculate precision, recall, F1-score, and other metrics.
+____________________________________________________________________________________
+def evaluate_performance(predicted, ground_truth):
+    """
+    Evaluate the performance of object detection and tracking using precision, recall, and F1-score.
+    """
+    predicted_labels = [x[0] for x in predicted]  # Extracting the object classes or labels
+    ground_truth_labels = [x[0] for x in ground_truth]
+    
+    precision = precision_score(ground_truth_labels, predicted_labels, average='macro')
+    recall = recall_score(ground_truth_labels, predicted_labels, average='macro')
+    f1 = f1_score(ground_truth_labels, predicted_labels, average='macro')
+    
+    return precision, recall, f1
+__________________________________________________________________________________________
+
+Putting it All Together
+
+In the main part of the code, we would read in the radar and camera data, process and synchronize them, apply sensor fusion, and then evaluate the performance.
+_________________________________________________________________________________
+def main():
+    # Load radar and camera data (example)
+    radar_data = [{'distance': 100, 'angle': 30, 'velocity': 20, 'timestamp': 0.1}, ...]
+    camera_data = [{'x': 150, 'y': 120, 'timestamp': 0.1, 'frame': frame_data}, ...]
+
+    # Step 1: Synchronize data
+    synchronized_data = synchronize_data(radar_data, camera_data)
+    
+    # Step 2: Apply sensor fusion
+    fused_objects = fuse_sensors(radar_data, camera_data)
+    
+    # Step 3: Evaluate performance
+    precision, recall, f1 = evaluate_performance(fused_objects, ground_truth)
+    print(f"Precision: {precision}, Recall: {recall}, F1-Score: {f1}")
+    
+    # Optionally, visualize or process the fused data for further analysis
+    # (e.g., visualization on road maps, alerting systems, etc.)
+    # Example: plot the fused trajectory
+    x_vals = [obj[0] for obj in fused_objects]
+    y_vals = [obj[1] for obj in fused_objects]
+    plt.plot(x_vals, y_vals)
+    plt.show()
+
+if __name__ == "__main__":
+    main()
+
+the Second Code 
+____________________________________________________________________________________________________________________________________________________________________________
+
+import cv2
+import numpy as np
+import tensorflow as tf
+from sklearn.preprocessing import MinMaxScaler
+
+# Step 1: Acquire Camera Data (one image)
+def acquire_camera_data(camera_source=0):
+    cap = cv2.VideoCapture(camera_source)  # Open camera
+    ret, frame = cap.read()  # Read a single frame
+    cap.release()
+    if ret:
+        return frame
+    else:
+        return None
+
+# Step 2: Simulate Radar Data (Simulate radar data as [distance, angle, velocity])
+def acquire_radar_data():
+    # Simulating radar data (Replace this with actual sensor interface if needed)
+    radar_data = np.array([[10, 45, 15], [12, 30, 18], [8, 60, 12]])  # [distance, angle, velocity]
+    return radar_data
+
+# Step 3: Preprocess Camera and Radar Data
+
+# Preprocessing Camera Data (resize and normalize)
+def preprocess_camera_data(frame):
+    resized_frame = cv2.resize(frame, (416, 416))  # Resize for neural network input
+    normalized_frame = resized_frame / 255.0  # Normalize pixel values to [0, 1]
+    return normalized_frame
+
+# Preprocessing Radar Data (normalize using MinMaxScaler)
+def preprocess_radar_data(radar_data):
+    scaler = MinMaxScaler()
+    normalized_radar_data = scaler.fit_transform(radar_data)  # Normalize radar data
+    return normalized_radar_data
+
+# Step 4: Feature Extraction using MobileNetV2 for Camera Data
+def extract_camera_features(frame):
+    model = tf.keras.applications.MobileNetV2(include_top=False, input_shape=(416, 416, 3))
+    frame = np.expand_dims(frame, axis=0)  # Add batch dimension
+    features = model.predict(frame)  # Extract features using MobileNetV2
+    return features.flatten()
+
+# Feature Extraction for Radar Data (flatten the radar data)
+def extract_radar_features(radar_data):
+    return radar_data.flatten()  # Flatten radar data (distance, angle, velocity)
+
+# Step 5: Sensor Fusion (Combine Camera and Radar Features)
+def fuse_features(camera_features, radar_features):
+    # Concatenate the flattened features from both sensors
+    fused_features = np.concatenate((camera_features, radar_features), axis=0)
+    return fused_features
+
+# Step 6: Object Detection using a Simple Neural Network
+def object_detection(fused_features):
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Dense(128, activation='relu', input_dim=len(fused_features)),
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dense(10, activation='softmax')  # Assume 10 object classes
+    ])
+    detection_result = model.predict(np.expand_dims(fused_features, axis=0))
+    return detection_result
+
+# Step 7: Output the Detection Result
+def output_results(detection_result):
+    object_classes = ['Car', 'Truck', 'Bike', 'Pedestrian', 'Bus', 'Motorcycle', 'Animal', 'Obstacle', 'Other', 'None']
+    detected_class = object_classes[np.argmax(detection_result)]
+    print(f"Detected Object: {detected_class} with Confidence: {np.max(detection_result)}")
+
+# Main Workflow
+if __name__ == "__main__":
+    # Acquire data from the camera and radar
+    camera_frame = acquire_camera_data()  # Capture one camera image
+    radar_data = acquire_radar_data()  # Simulate radar data
+
+    if camera_frame is not None and radar_data is not None:
+        # Preprocess both camera and radar data
+        preprocessed_camera = preprocess_camera_data(camera_frame)
+        preprocessed_radar = preprocess_radar_data(radar_data)
+
+        # Extract features from both camera and radar data
+        camera_features = extract_camera_features(preprocessed_camera)
+        radar_features = extract_radar_features(preprocessed_radar)
+
+        # Fuse the features
+        fused_features = fuse_features(camera_features, radar_features)
+
+        # Perform object detection on the fused features
+        detection_result = object_detection(fused_features)
+
+        # Output the results (detected object and confidence)
+        output_results(detection_result)
+    else:
+        print("Failed to acquire data from camera or radar.")
+____________________________________________________________________________________________________________________________________________________________________________
+
+final code for one image camera and one data Radar 
+
+import numpy as np
+import cv2
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from sklearn.preprocessing import MinMaxScaler
+
+# Step 1: Load Camera Image from file
+def load_camera_image(image_path):
+    image = cv2.imread(image_path)
+    if image is None:
+        print(f"Error: Unable to load image {image_path}")
+        return None
+    return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert to RGB for display
+
+# Step 2: Load Radar Data from a .png file (treated as grayscale image)
+def load_radar_data(radar_path):
+    radar_image = cv2.imread(radar_path, cv2.IMREAD_GRAYSCALE)  # Read as grayscale
+    if radar_image is None:
+        print(f"Error: Unable to load radar data {radar_path}")
+        return None
+    return radar_image  # Return the radar image as grayscale
+
+# Step 3: Preprocess Camera Image (resize and normalize)
+def preprocess_camera_data(frame):
+    resized_frame = cv2.resize(frame, (416, 416))  # Resize for neural network input
+    normalized_frame = resized_frame / 255.0  # Normalize pixel values to [0, 1]
+    return normalized_frame
+
+# Step 4: Preprocess Radar Image (normalize and flatten)
+def preprocess_radar_data(radar_data):
+    # Normalize the radar data (grayscale values)
+    radar_data = radar_data / 255.0  # Normalize grayscale to [0, 1]
+    return radar_data.flatten()  # Flatten for feature fusion
+
+# Step 5: Feature Extraction using a simple CNN model for the Camera Data
+def extract_camera_features(frame):
+    model = tf.keras.applications.MobileNetV2(include_top=False, input_shape=(416, 416, 3))
+    frame = np.expand_dims(frame, axis=0)  # Add batch dimension
+    features = model.predict(frame)  # Extract features using MobileNetV2
+    return features.flatten()
+
+# Step 6: Feature Extraction for Radar Data (flatten the radar data)
+def extract_radar_features(radar_data):
+    return radar_data.flatten()  # Flatten radar data (grayscale values)
+
+# Step 7: Sensor Fusion (Combine Camera and Radar Features)
+def fuse_features(camera_features, radar_features):
+    # Concatenate the flattened features from both sensors
+    fused_features = np.concatenate((camera_features, radar_features), axis=0)
+    return fused_features
+
+# Step 8: Object Detection using a Simple Neural Network (for demonstration)
+def object_detection(fused_features):
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Dense(128, activation='relu', input_dim=len(fused_features)),
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dense(10, activation='softmax')  # Assume 10 object classes
+    ])
+    detection_result = model.predict(np.expand_dims(fused_features, axis=0))
+    return detection_result
+
+# Step 9: Visualize Detected Objects on Camera Image (Bounding Boxes)
+def visualize_camera_detection(image, detected_class, bounding_box):
+    # Draw bounding box on the camera image
+    x, y, w, h = bounding_box
+    color = (0, 255, 0)  # Green for detected objects
+    cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
+    
+    # Annotate the class label
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    cv2.putText(image, detected_class, (x, y - 10), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
+    
+    # Display the image with bounding boxes
+    plt.imshow(image)
+    plt.title("Object Detection on Camera Image")
+    plt.axis('off')
+    plt.show()
+
+# Step 10: Precision and Recall Visualization
+def plot_precision_recall(precision, recall):
+    labels = ['Precision', 'Recall']
+    values = [precision, recall]
+    
+    # Create a bar chart
+    plt.bar(labels, values, color=['blue', 'orange'])
+    plt.ylim(0, 1)
+    plt.title("Precision and Recall")
+    plt.ylabel("Score")
+    plt.show()
+
+# Step 11: Precision and Recall Calculation (for evaluation)
+def precision_recall(predicted_classes, ground_truth_classes):
+    TP = np.sum(predicted_classes == ground_truth_classes)
+    FP = np.sum(predicted_classes != ground_truth_classes)
+    FN = len(ground_truth_classes) - TP
+    
+    precision = TP / (TP + FP) if TP + FP > 0 else 0
+    recall = TP / (TP + FN) if TP + FN > 0 else 0
+    return precision, recall, TP, FP, FN
+
+# Step 12: Output Results (Detection Result)
+def output_results(detection_result):
+    object_classes = ['Car', 'Truck', 'Bike', 'Pedestrian', 'Bus', 'Motorcycle', 'Animal', 'Obstacle', 'Other', 'None']
+    detected_class = object_classes[np.argmax(detection_result)]
+    return detected_class
+
+# Main Workflow
+def run_sensor_fusion(image_path, radar_path):
+    # Step 12.1: Load Real Camera Image and Radar Data
+    camera_image = load_camera_image(image_path)
+    radar_data = load_radar_data(radar_path)
+    
+    if camera_image is None or radar_data is None:
+        print("Error: Missing data for object detection.")
+        return
+
+    # Step 12.2: Preprocess Camera Image and Radar Data
+    preprocessed_camera = preprocess_camera_data(camera_image)
+    preprocessed_radar = preprocess_radar_data(radar_data)
+    
+    # Step 12.3: Extract Features from Camera and Radar Data
+    camera_features = extract_camera_features(preprocessed_camera)
+    radar_features = extract_radar_features(preprocessed_radar)
+    
+    # Step 12.4: Fuse Camera and Radar Features
+    fused_features = fuse_features(camera_features, radar_features)
+    
+    # Step 12.5: Perform Object Detection
+    detection_result = object_detection(fused_features)
+    
+    # Step 12.6: Output Detection Results
+    detected_class = output_results(detection_result)
+    print(f"Detected Object: {detected_class}")
+    
+    # Step 12.7: Simulate Ground Truth and Calculate Precision and Recall
+    ground_truth_classes = np.array([0])  # Assuming ground truth is 'Car' (class 0)
+    predicted_classes = np.argmax(detection_result, axis=1)  # Get the predicted class (index of max confidence)
+    
+    precision, recall, TP, FP, FN = precision_recall(predicted_classes, ground_truth_classes)
+    
+    # Display Precision and Recall
+    print(f"Precision: {precision:.2f}")
+    print(f"Recall: {recall:.2f}")
+    print(f"True Positives: {TP}, False Positives: {FP}, False Negatives: {FN}")
+    
+    # Visualize Precision and Recall as a bar chart
+    plot_precision_recall(precision, recall)
+    
+    # Step 12.8: Visualize Camera Detection
+    # Simulate a bounding box for visualization (e.g., around detected object)
+    bounding_box = (100, 100, 200, 200)  # Example bounding box
+    visualize_camera_detection(camera_image, detected_class, bounding_box)
+
+# Run the sensor fusion process with your own image and radar file paths
+if __name__ == "__main__":
+    # Replace these paths with your real data file paths
+    image_path = "path_to_your_camera_image.png"  # Path to your camera image
+    radar_path = "path_to_your_radar_image.png"  # Path to your radar image (.png
+
+__________________________________________________________________________________________________________________________________________________________________________
